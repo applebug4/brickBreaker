@@ -1,0 +1,288 @@
+<html>
+
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+<script>
+var canvas;
+var canvasContext;
+
+var paddle1X = 1250;
+const PADDLE_THICKNESS = 10;
+const PADDLE_HEIGHT = 10;
+const PADDLE_WIDTH = 100;
+const FRAMES_PER_SECOND = 30;
+const BRICK_W = 80;
+const BRICK_H = 40;
+
+
+const BRICK_R = 4;
+const BRICK_C = 10;
+var brickGrid = new Array();
+
+
+var seconds = 0;
+var countingFrames = 0;
+const BALL_RADIUS = 15;
+
+var ballSpeedX = 0;
+var ballSpeedY = 0;
+var serve = true;
+var ballX = paddle1X+PADDLE_WIDTH/2;
+var ballY;
+
+var drawNet;
+
+function calculateMousePos(evt) {
+	var rect = canvas.getBoundingClientRect();
+	var root = document.documentElement;
+	var mouseX = evt.clientX - rect.left - root.scrollLeft;
+	var mouseY = evt.clientY - rect.top - root.scrollTop;
+	return {
+		x:mouseX,
+		y:mouseY
+	};
+}
+
+window.onload = function() {
+
+	canvas = document.getElementById('gameCanvas');
+	canvasContext = canvas.getContext('2d');
+        
+        ballY = canvas.height-PADDLE_HEIGHT-BALL_RADIUS;
+	 
+        populateBricks();
+
+	setInterval(function() {
+			moveEverything();
+			drawEverything();
+			
+                        //if ballSpeedX is 0, one of the paddles has the ball and after 2 seconds, I want the ball served
+                        if(serve) {
+
+			  countingFrames++;
+                          
+                          //When countingframes is 30, I add 1 second to the var 'seconds'
+ 			  if(countingFrames == 30) {
+  			    countingFrames = 0;
+                            seconds++;
+   			    
+                            //If seconds = 2, I set it to zero and then make the ball move.
+                            if(seconds == 2) {
+
+   			      seconds = 0;
+                              ballSpeedX = 10;
+                              ballSpeedY = -10;
+                              serve = false;
+			
+			    }
+
+                          }  
+
+	                }
+
+
+		}, 1000/FRAMES_PER_SECOND);
+		
+
+
+	canvas.addEventListener('mousemove',
+		function(evt) {
+			var mousePos = calculateMousePos(evt);
+			paddle1X = mousePos.x - (PADDLE_WIDTH/2);
+                      
+		});  
+
+}
+
+function ballReset() {
+
+  ballSpeedX = 0;
+  ballSpeedY = 0;
+  ballX = paddle1X+PADDLE_WIDTH/2;
+  ballY = canvas.height-PADDLE_HEIGHT-BALL_RADIUS; 
+  serve = true;
+
+}
+
+
+function populateBricks() {
+
+  for(i=0;i<BRICK_R;i++) {
+    brickGrid[i] = new Array();
+
+    for(j=0; j<BRICK_C;j++) {
+      brickGrid[i][j]=true;
+    }
+
+  }
+
+}
+
+function drawBricks() {
+
+  for(i=0;i<BRICK_R;i++) {
+
+    for(j=0; j<BRICK_C;j++) {
+       
+      if(brickGrid[i][j]) {
+        colorRect(BRICK_W*j,BRICK_H*i, BRICK_W-2,BRICK_H-2, 'orange');
+      
+} 
+
+    }
+
+  }
+	
+}
+
+function moveEverything() {
+
+  //Preventing the paddle from going past the LEFT side of the canvas
+  if (paddle1X< 0){  
+    paddle1X = 0; 
+  }
+
+  //Preventing the paddle from going past the RIGHT side of the canvas
+  if (paddle1X+PADDLE_WIDTH > canvas.width){  
+    paddle1X = canvas.width-PADDLE_WIDTH; 
+  }
+
+  if(serve){
+    ballX = paddle1X+PADDLE_WIDTH/2;
+    return;
+  }
+
+  ballX = ballX + ballSpeedX;
+  ballY = ballY + ballSpeedY;
+  
+  //Collision Detection With the paddle or reset the ball
+  if(  ballY+BALL_RADIUS > canvas.height-PADDLE_HEIGHT  ){
+    
+
+      
+
+    if(ballX > paddle1X && ballX< paddle1X+PADDLE_WIDTH){
+      //ballSpeedX = -ballSpeedX;
+      var deltaX = ballX-(paddle1X+PADDLE_WIDTH/2);
+      ballSpeedX = deltaX * 0.35; 
+      ballSpeedY = -ballSpeedY;was
+    }  
+    else{
+      ballReset();
+    }
+
+  }
+
+  //Collision Detection of the Top of the canvas
+  if(ballY-BALL_RADIUS <= 0) {
+    ballSpeedY = -ballSpeedY;
+  }
+
+  //collision detection with the right side of the canvas
+  if(ballX+BALL_RADIUS>canvas.width) {
+    ballSpeedX = -ballSpeedX;
+    if(ballX > canvas.width) {
+    ballX = canvas.width-BALL_RADIUS;
+    }
+  }
+
+  //collision detection with the left side of the canvas
+  if(ballX-BALL_RADIUS<0) {
+    ballSpeedX = -ballSpeedX;
+  
+  }
+
+  var bounce = false;
+
+  for(i=0;i<BRICK_R;i++) {
+    
+    for(j=0; j<BRICK_C;j++) {
+    
+    if(brickGrid[i][j]){
+
+       //collision detecion with the bottom of the brick
+       if(ballSpeedY < 0 && ballY-BALL_RADIUS <= BRICK_H*i){
+									
+         if( ballX >= BRICK_W*j && ballX <= BRICK_W*j + BRICK_W) {
+           debugger;
+           bounce = true;
+           brickGrid[i][j] = false;
+         } 
+
+     } 
+
+      
+         //collision detecion with the top of the brick
+       if(ballSpeedY > 0 && ballY+BALL_RADIUS <= BRICK_H*i){
+
+         if( ballX >= BRICK_W*j && ballX <= BRICK_W*j + BRICK_W) {
+           debugger;
+           bounce = true;
+           brickGrid[i][j] = false;
+         } 
+
+     }  
+  
+         
+         //collision detecion with the right side of the brick
+         if(ballSpeedX > 0 && ballX-BALL_RADIUS <= BRICK_W*j){
+
+           if(ballY >= BRICK_H*i && ballY <= BRICK_H*i+BRICK_H){
+             debugger;
+             bounce = true;
+             brickGrid[i][j] = false;
+           }
+ 
+         }
+
+        
+         //collision detecion with the left side of the brick
+          if(ballSpeedX < 0 && ballX-BALL_RADIUS <= BRICK_W*j+BRICK_W){
+           
+            if(ballY >= BRICK_H*i && ballY <= BRICK_H*i+BRICK_H){
+              debugger;
+              bounce = true;
+              brickGrid[i][j] = false;
+            }
+
+         }
+ 
+      }
+    
+    }
+
+  }
+
+  // after the nested forloop, if bounce is true, change ballspeed's only once 
+  if(bounce == true) {
+    ballSpeedX = -ballSpeedX;
+    ballSpeedY = -ballSpeedY;
+  }
+  
+}
+
+function drawEverything() {
+  //drawing the canvas	
+  colorRect(0,0,canvas.width,canvas.height,'black');
+  colorRect(paddle1X,canvas.height-PADDLE_HEIGHT,PADDLE_WIDTH,PADDLE_HEIGHT,'white');
+  drawBricks()
+
+  colorCircle(ballX, ballY, BALL_RADIUS,'MediumPurple');	
+  
+       
+} 
+
+function colorCircle(centerX, centerY, radius, drawColor) {
+	canvasContext.fillStyle = drawColor;
+	canvasContext.beginPath();
+	canvasContext.arc(centerX, centerY, radius, 0,Math.PI*2,true);
+	canvasContext.fill();
+}
+
+function colorRect(leftX,topY, width,height, drawColor) {
+	canvasContext.fillStyle = drawColor;
+	canvasContext.fillRect(leftX,topY, width,height);
+}
+
+</script>
+
+</html>
